@@ -1,0 +1,6 @@
+.vscode
+.idea
+*.exe
+.env
+node_modules
+*.pem
