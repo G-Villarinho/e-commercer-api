@@ -76,7 +76,7 @@ func ExtractUserIDFromToken(tokenString string) (string, error) {
 }
 
 func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
-	keyData, err := os.ReadFile(path)
+	keyData, err := os.ReadFile("ec_private_key.pem")
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
 }
 
 func LoadPublicKey(path string) (*ecdsa.PublicKey, error) {
-	keyData, err := os.ReadFile(path)
+	keyData, err := os.ReadFile("ec_public_key.pem")
 	if err != nil {
 		return nil, err
 	}

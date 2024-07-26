@@ -1,5 +1,7 @@
 package domain
 
+import "context"
+
 type SendEmailRequest struct {
 	From    string
 	To      []string
@@ -10,10 +12,15 @@ type SendEmailRequest struct {
 	ReplyTo string
 }
 
+type OTPEmailPayload struct {
+	Name string
+	OTP  string
+}
+
 type SendEmailResponse struct {
 	Id string
 }
 
 type EmailService interface {
-	SendEmail(req SendEmailRequest) (*SendEmailResponse, error)
+	SendConfirmationCode(ctx context.Context, user User) error
 }

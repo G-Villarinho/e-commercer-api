@@ -17,7 +17,7 @@ import (
 func ResendCode(i *do.Injector) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			userSession := do.MustInvoke[domain.UserSessionService](i)
+			userSession := do.MustInvoke[domain.SessionService](i)
 			authorizationHeader := ctx.Request().Header.Get("Authorization")
 
 			if authorizationHeader == "" {
@@ -33,7 +33,7 @@ func ResendCode(i *do.Injector) echo.MiddlewareFunc {
 				})
 			}
 
-			publicKey, err := util.LoadPrivateKey(config.Env.SecretKeyPath)
+			publicKey, err := util.LoadPublicKey(config.Env.SecretKeyPath)
 			if err != nil {
 				return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
 					Status: http.StatusInternalServerError,

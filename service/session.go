@@ -10,14 +10,14 @@ import (
 	"github.com/samber/do"
 )
 
-type userSessionService struct {
-	i                     *do.Injector
-	userSessionRepository domain.UserSessionRepository
-	userRepository        domain.UserRepository
+type sessionService struct {
+	i                 *do.Injector
+	sessionRepository domain.SessionRepository
+	userRepository    domain.UserRepository
 }
 
-func NewUserSessionService(i *do.Injector) (domain.UserSessionService, error) {
-	tokenRepository, err := do.Invoke[domain.UserSessionRepository](i)
+func NewSessionService(i *do.Injector) (domain.SessionService, error) {
+	sessionRepository, err := do.Invoke[domain.SessionRepository](i)
 	if err != nil {
 		return nil, err
 	}
@@ -27,14 +27,14 @@ func NewUserSessionService(i *do.Injector) (domain.UserSessionService, error) {
 		return nil, err
 	}
 
-	return &userSessionService{
-		i:                     i,
-		userSessionRepository: tokenRepository,
-		userRepository:        userRepository,
+	return &sessionService{
+		i:                 i,
+		sessionRepository: sessionRepository,
+		userRepository:    userRepository,
 	}, nil
 }
 
-func (t *userSessionService) Create(ctx context.Context, user domain.User) (string, error) {
+func (t *sessionService) Create(ctx context.Context, user domain.User) (string, error) {
 	log := slog.With(
 		slog.String("service", "token"),
 		slog.String("func", "Create"),
@@ -48,7 +48,7 @@ func (t *userSessionService) Create(ctx context.Context, user domain.User) (stri
 		return "", err
 	}
 
-	if err := t.userSessionRepository.Create(ctx, user, token); err != nil {
+	if err := t.sessionRepository.Create(ctx, user, token); err != nil {
 		log.Error("Failed to save token", slog.String("error", err.Error()))
 		return "", err
 	}
@@ -56,7 +56,7 @@ func (t *userSessionService) Create(ctx context.Context, user domain.User) (stri
 	return token, nil
 }
 
-func (t *userSessionService) GetUser(ctx context.Context, token string) (*domain.UserSession, error) {
+func (t *sessionService) GetUser(ctx context.Context, token string) (*domain.Session, error) {
 	log := slog.With(
 		slog.String("service", "token"),
 		slog.String("func", "GetUser"),
@@ -70,7 +70,7 @@ func (t *userSessionService) GetUser(ctx context.Context, token string) (*domain
 		return nil, err
 	}
 
-	user, err := t.userSessionRepository.GetUser(ctx, userID)
+	user, err := t.sessionRepository.GetUser(ctx, userID)
 	if err != nil {
 		log.Error("Failed to retrieve user", slog.String("error", err.Error()))
 		return nil, err
@@ -89,7 +89,7 @@ func (t *userSessionService) GetUser(ctx context.Context, token string) (*domain
 	return user, nil
 }
 
-func (t *userSessionService) Update(ctx context.Context) error {
+func (t *sessionService) Update(ctx context.Context) error {
 	log := slog.With(
 		slog.String("service", "token"),
 		slog.String("func", "Update"),
@@ -97,7 +97,7 @@ func (t *userSessionService) Update(ctx context.Context) error {
 
 	log.Info("Initializing token update process")
 
-	userSession, ok := ctx.Value(middleware.UserKey).(*domain.UserSession)
+	userSession, ok := ctx.Value(middleware.UserKey).(*domain.Session)
 	if !ok || userSession == nil {
 		return domain.ErrUserNotFoundInContext
 	}
@@ -108,7 +108,7 @@ func (t *userSessionService) Update(ctx context.Context) error {
 		return err
 	}
 
-	if err := t.userSessionRepository.Update(ctx, *user, userSession.Token); err != nil {
+	if err := t.sessionRepository.Update(ctx, *user, userSession.Token); err != nil {
 		log.Error("Failed to update token", slog.String("error", err.Error()))
 		return err
 	}
@@ -116,7 +116,7 @@ func (t *userSessionService) Update(ctx context.Context) error {
 	return nil
 }
 
-func (t *userSessionService) SaveOTP(ctx context.Context, email string, otp string) error {
+func (t *sessionService) SaveOTP(ctx context.Context, email string, otp string) error {
 	log := slog.With(
 		slog.String("service", "token"),
 		slog.String("func", "SaveOTP"),
@@ -124,7 +124,7 @@ func (t *userSessionService) SaveOTP(ctx context.Context, email string, otp stri
 
 	log.Info("Initializing OTP save process")
 
-	err := t.userSessionRepository.SaveOTP(ctx, email, otp)
+	err := t.sessionRepository.SaveOTP(ctx, email, otp)
 	if err != nil {
 		log.Error("Failed to save OTP", slog.String("error", err.Error()))
 		return err

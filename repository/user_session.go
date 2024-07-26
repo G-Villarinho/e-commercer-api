@@ -21,7 +21,7 @@ type userSessionRepository struct {
 	redisClient *redis.Client
 }
 
-func NewUserSessionRepository(i *do.Injector) (domain.UserSessionRepository, error) {
+func NewUserSessionRepository(i *do.Injector) (domain.SessionRepository, error) {
 	db, err := do.Invoke[*gorm.DB](i)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (u *userSessionRepository) Create(ctx context.Context, user domain.User, to
 
 	log.Info("Initializing token creation process")
 
-	userSession := domain.UserSession{
+	userSession := domain.Session{
 		Token:     token,
 		Name:      user.Name,
 		UserID:    user.ID,
@@ -69,7 +69,7 @@ func (u *userSessionRepository) Create(ctx context.Context, user domain.User, to
 	return nil
 }
 
-func (u *userSessionRepository) GetUser(ctx context.Context, userID string) (*domain.UserSession, error) {
+func (u *userSessionRepository) GetUser(ctx context.Context, userID string) (*domain.Session, error) {
 	log := slog.With(
 		slog.String("repository", "token"),
 		slog.String("func", "GetUser"),
@@ -87,7 +87,7 @@ func (u *userSessionRepository) GetUser(ctx context.Context, userID string) (*do
 		return nil, err
 	}
 
-	var user domain.UserSession
+	var user domain.Session
 	if err := jsoniter.UnmarshalFromString(userJSON, &user); err != nil {
 		log.Error("Failed to unmarshal user data", slog.String("error", err.Error()))
 		return nil, err
@@ -110,7 +110,7 @@ func (u *userSessionRepository) Update(ctx context.Context, user domain.User, to
 		return err
 	}
 
-	userSession := domain.UserSession{
+	userSession := domain.Session{
 		Token:     token,
 		Name:      user.Name,
 		UserID:    user.ID,

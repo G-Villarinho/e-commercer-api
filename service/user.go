@@ -12,10 +12,10 @@ import (
 )
 
 type userService struct {
-	i                  *do.Injector
-	userRespository    domain.UserRepository
-	userSessionService domain.UserSessionService
-	userEmailService   domain.UserEmailService
+	i               *do.Injector
+	userRespository domain.UserRepository
+	sessionService  domain.SessionService
+	emailService    domain.EmailService
 }
 
 func NewUserService(i *do.Injector) (domain.UserService, error) {
@@ -24,21 +24,21 @@ func NewUserService(i *do.Injector) (domain.UserService, error) {
 		return nil, err
 	}
 
-	userSesseionService, err := do.Invoke[domain.UserSessionService](i)
+	sessionService, err := do.Invoke[domain.SessionService](i)
 	if err != nil {
 		return nil, err
 	}
 
-	userEmailService, err := do.Invoke[domain.UserEmailService](i)
+	emailService, err := do.Invoke[domain.EmailService](i)
 	if err != nil {
 		return nil, err
 	}
 
 	return &userService{
-		i:                  i,
-		userRespository:    userRepository,
-		userSessionService: userSesseionService,
-		userEmailService:   userEmailService,
+		i:               i,
+		userRespository: userRepository,
+		sessionService:  sessionService,
+		emailService:    emailService,
 	}, nil
 }
 
@@ -102,7 +102,7 @@ func (u *userService) SignIn(ctx context.Context, signInPayload domain.SignInPay
 		return nil, domain.ErrInvalidPassword
 	}
 
-	token, err := u.userSessionService.Create(ctx, *user)
+	token, err := u.sessionService.Create(ctx, *user)
 	if err != nil {
 		log.Error("Failed to create token", slog.String("error", err.Error()))
 		return nil, err
@@ -111,7 +111,7 @@ func (u *userService) SignIn(ctx context.Context, signInPayload domain.SignInPay
 	if !user.EmailConfirmed {
 		log.Warn("User email not confirmed")
 
-		if err := u.userEmailService.SendConfirmationCode(ctx, *user); err != nil {
+		if err := u.emailService.SendConfirmationCode(ctx, *user); err != nil {
 			log.Error("Failed to send OTP email", slog.String("error", err.Error()))
 			return nil, err
 		}
@@ -164,7 +164,7 @@ func (u *userService) UpdateName(ctx context.Context, name string) error {
 
 	log.Info("Initializing user name update process")
 
-	user, ok := ctx.Value(middleware.UserKey).(*domain.UserSession)
+	user, ok := ctx.Value(middleware.UserKey).(*domain.Session)
 	if !ok || user == nil {
 		return domain.ErrUserNotFoundInContext
 	}
@@ -179,7 +179,7 @@ func (u *userService) UpdateName(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := u.userSessionService.Update(ctx); err != nil {
+	if err := u.sessionService.Update(ctx); err != nil {
 		log.Error("Failed to update token", slog.String("error", err.Error()))
 		return err
 	}
@@ -235,7 +235,7 @@ func (u *userService) UpdatePassword(ctx context.Context, updatePasswordPayload 
 		return err
 	}
 
-	if err := u.userSessionService.Update(ctx); err != nil {
+	if err := u.sessionService.Update(ctx); err != nil {
 		log.Error("Failed to update token", slog.String("error", err.Error()))
 		return err
 	}
@@ -252,7 +252,7 @@ func (u *userService) GetUserInfo(ctx context.Context) (*domain.UserResponse, er
 
 	log.Info("Initializing get user info process")
 
-	user, ok := ctx.Value(middleware.UserKey).(*domain.UserSession)
+	user, ok := ctx.Value(middleware.UserKey).(*domain.Session)
 	if !ok || user == nil {
 		return nil, domain.ErrUserNotFoundInContext
 	}
@@ -268,7 +268,7 @@ func (u *userService) ResendCode(ctx context.Context, resendCodePayload domain.R
 
 	log.Info("Initializing resend code process")
 
-	userSession, _ := ctx.Value(middleware.UserKey).(*domain.UserSession)
+	userSession, _ := ctx.Value(middleware.UserKey).(*domain.Session)
 
 	var email string
 	if userSession != nil {
@@ -283,7 +283,7 @@ func (u *userService) ResendCode(ctx context.Context, resendCodePayload domain.R
 		return err
 	}
 
-	if err := u.userEmailService.SendConfirmationCode(ctx, *user); err != nil {
+	if err := u.emailService.SendConfirmationCode(ctx, *user); err != nil {
 		log.Error("Failed to send OTP email", slog.String("error", err.Error()))
 		return err
 	}

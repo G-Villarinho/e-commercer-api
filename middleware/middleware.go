@@ -21,7 +21,7 @@ const UserKey contextKey = "user"
 func CheckLoggedIn(i *do.Injector) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			userSession := do.MustInvoke[domain.UserSessionService](i)
+			userSession := do.MustInvoke[domain.SessionService](i)
 			userService := do.MustInvoke[domain.UserService](i)
 
 			authorizationHeader := ctx.Request().Header.Get("Authorization")
@@ -100,7 +100,7 @@ func CheckLoggedIn(i *do.Injector) echo.MiddlewareFunc {
 func ConfirmPassword(i *do.Injector) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			userSession := do.MustInvoke[domain.UserSessionService](i)
+			userSession := do.MustInvoke[domain.SessionService](i)
 
 			authorizationHeader := ctx.Request().Header.Get("Authorization")
 			if authorizationHeader == "" {

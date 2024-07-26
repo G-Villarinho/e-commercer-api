@@ -34,7 +34,7 @@ func (s *storeService) Create(ctx context.Context, storePayload domain.StorePayl
 
 	log.Info("Initializing store creation process")
 
-	user, ok := ctx.Value(middleware.UserKey).(*domain.UserSession)
+	user, ok := ctx.Value(middleware.UserKey).(*domain.Session)
 	if !ok || user == nil {
 		return domain.ErrUserNotFoundInContext
 	}
