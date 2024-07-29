@@ -38,9 +38,6 @@ services:
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_NAME=BioBancoBrasil
-      - DB_USER=BioBancoBrasil_user
-      - DB_PASSWORD=user_password
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     ports:
