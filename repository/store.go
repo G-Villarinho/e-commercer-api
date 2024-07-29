@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/OVillas/e-commercer-api/domain"
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"github.com/samber/do"
 	"gorm.io/gorm"
 )
@@ -47,5 +49,28 @@ func (s *storeRepository) Create(ctx context.Context, store domain.Store) error 
 		return err
 	}
 
+	log.Info("store creation excuted sucessfully")
 	return nil
+}
+
+func (s *storeRepository) GetAll(ctx context.Context, userID uuid.UUID) ([]*domain.Store, error) {
+	log := slog.With(
+		slog.String("repository", "store"),
+		slog.String("func", "GetAll"),
+	)
+
+	var stores []*domain.Store
+	if err := s.db.WithContext(ctx).Where("userId = ?", userID.String()).Find(&stores).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn("store not found")
+			return nil, nil
+		}
+
+		log.Error("Failed to stores", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	log.Info("stores found successfully")
+
+	return stores, nil
 }

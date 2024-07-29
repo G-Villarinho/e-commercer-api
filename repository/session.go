@@ -15,13 +15,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type userSessionRepository struct {
+type sessionRepository struct {
 	i           *do.Injector
 	db          *gorm.DB
 	redisClient *redis.Client
 }
 
-func NewUserSessionRepository(i *do.Injector) (domain.SessionRepository, error) {
+func NewSessionRepository(i *do.Injector) (domain.SessionRepository, error) {
 	db, err := do.Invoke[*gorm.DB](i)
 	if err != nil {
 		return nil, err
@@ -32,14 +32,14 @@ func NewUserSessionRepository(i *do.Injector) (domain.SessionRepository, error) 
 		return nil, err
 	}
 
-	return &userSessionRepository{
+	return &sessionRepository{
 		i:           i,
 		db:          db,
 		redisClient: redisClient,
 	}, nil
 }
 
-func (u *userSessionRepository) Create(ctx context.Context, user domain.User, token string) error {
+func (u *sessionRepository) Create(ctx context.Context, user domain.User, token string) error {
 	log := slog.With(
 		slog.String("repository", "token"),
 		slog.String("func", "Create"),
@@ -69,7 +69,7 @@ func (u *userSessionRepository) Create(ctx context.Context, user domain.User, to
 	return nil
 }
 
-func (u *userSessionRepository) GetUser(ctx context.Context, userID string) (*domain.Session, error) {
+func (u *sessionRepository) GetUser(ctx context.Context, userID string) (*domain.Session, error) {
 	log := slog.With(
 		slog.String("repository", "token"),
 		slog.String("func", "GetUser"),
@@ -96,7 +96,7 @@ func (u *userSessionRepository) GetUser(ctx context.Context, userID string) (*do
 	return &user, nil
 }
 
-func (u *userSessionRepository) Update(ctx context.Context, user domain.User, token string) error {
+func (u *sessionRepository) Update(ctx context.Context, user domain.User, token string) error {
 	log := slog.With(
 		slog.String("repository", "token"),
 		slog.String("func", "Update"),
@@ -133,7 +133,7 @@ func (u *userSessionRepository) Update(ctx context.Context, user domain.User, to
 	return nil
 }
 
-func (u *userSessionRepository) SaveOTP(ctx context.Context, email string, otp string) error {
+func (u *sessionRepository) SaveOTP(ctx context.Context, email string, otp string) error {
 	log := slog.With(
 		slog.String("repository", "user_session"),
 		slog.String("func", "SaveOTP"),
@@ -150,7 +150,7 @@ func (u *userSessionRepository) SaveOTP(ctx context.Context, email string, otp s
 	return nil
 }
 
-func (u *userSessionRepository) VerifyOTP(ctx context.Context, email string, otp string) (bool, error) {
+func (u *sessionRepository) GetOTP(ctx context.Context, email string) (string, error) {
 	log := slog.With(
 		slog.String("repository", "user_session"),
 		slog.String("func", "VerifyOTP"),
@@ -162,27 +162,22 @@ func (u *userSessionRepository) VerifyOTP(ctx context.Context, email string, otp
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			log.Warn("OTP not found")
-			return false, domain.ErrOTPNotFound
+			return "", domain.ErrOTPNotFound
 		}
 		log.Error("Failed to retrieve OTP", slog.String("error", err.Error()))
-		return false, err
-	}
-
-	if storedOTP != otp {
-		log.Warn("OTP mismatch")
-		return false, domain.ErrOTPInvalid
+		return "", err
 	}
 
 	log.Info("OTP verified successfully")
-	return true, nil
+	return storedOTP, nil
 }
 
-func (t *userSessionRepository) getTokenKey(id string) string {
+func (t *sessionRepository) getTokenKey(id string) string {
 	tokenKey := fmt.Sprintf("usersession_%s", id)
 	return tokenKey
 }
 
-func (t *userSessionRepository) getOTPKey(email string) string {
+func (t *sessionRepository) getOTPKey(email string) string {
 	OTPKey := fmt.Sprintf("usersession_OTP_%s", email)
 	return OTPKey
 }

@@ -33,6 +33,7 @@ type SessionService interface {
 	GetUser(ctx context.Context, token string) (*Session, error)
 	Update(ctx context.Context) error
 	SaveOTP(ctx context.Context, email string, otp string) error
+	GetOTP(ctx context.Context, email string) (string, error)
 }
 
 type SessionRepository interface {
@@ -40,7 +41,7 @@ type SessionRepository interface {
 	GetUser(ctx context.Context, userID string) (*Session, error)
 	Update(ctx context.Context, user User, token string) error
 	SaveOTP(ctx context.Context, email string, otp string) error
-	VerifyOTP(ctx context.Context, email string, otp string) (bool, error)
+	GetOTP(ctx context.Context, email string) (string, error)
 }
 
 func (u *Session) ToResponse() *UserResponse {

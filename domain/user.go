@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OVillas/e-commercer-api/util"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -22,10 +23,12 @@ var (
 	ErrUserNotFoundInContext = errors.New("user not found in context")
 	ErrInvalidOldPassword    = errors.New("invalid old password")
 	ErrPasswordIsSame        = errors.New("new password is same as old password")
+	ErrEmailAlreadyConfirmed = errors.New("email already confirmed")
+	ErrOTPExpires            = errors.New("otp expires")
 )
 
 type User struct {
-	ID             uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey;column:id"`
+	ID             uuid.UUID      `gorm:"type:char(36);primaryKey;column:id"`
 	Name           string         `gorm:"size:100;not null;column:name"`
 	Username       string         `gorm:"uniqueIndex;size:100;not null;column:username"`
 	Email          string         `gorm:"uniqueIndex;size:100;not null;column:email"`
@@ -70,6 +73,11 @@ type UpdatePasswordPayload struct {
 type ResendCodePayload struct {
 	Email string `json:"email" validate:"required,email"`
 }
+
+type ConfirmEmailPayload struct {
+	OTP string `json:"otp" validate:"required,numeric,min=6,max=6"`
+}
+
 type UserHandler interface {
 	Create(ctx echo.Context) error
 	SignIn(ctx echo.Context) error
@@ -77,16 +85,17 @@ type UserHandler interface {
 	UpdatePassword(ctx echo.Context) error
 	GetUserInfo(ctx echo.Context) error
 	ResendCode(ctx echo.Context) error
+	ConfirmEmail(ctx echo.Context) error
 }
 
 type UserService interface {
 	Create(ctx context.Context, user UserPayLoad) error
 	SignIn(ctx context.Context, signInPayload SignInPayLoad) (*SessionResponse, error)
-	CheckEmailConfirmation(ctx context.Context, email string) error
 	UpdateName(ctx context.Context, name string) error
 	UpdatePassword(ctx context.Context, updatePasswordPayload UpdatePasswordPayload) error
 	GetUserInfo(ctx context.Context) (*UserResponse, error)
 	ResendCode(ctx context.Context, resendCodePayload ResendCodePayload) error
+	ConfirmEmail(ctx context.Context, confirmEmailPayload ConfirmEmailPayload) error
 }
 
 type UserRepository interface {
@@ -95,6 +104,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
+	UpdateConfirmEmail(ctx context.Context, id uuid.UUID) error
 }
 
 func (u *UserPayLoad) trim() {
@@ -142,6 +152,12 @@ func (r *ResendCodePayload) Validate() error {
 	r.trim()
 	validate := validator.New()
 	return validate.Struct(r)
+}
+
+func (u *ConfirmEmailPayload) Validate() error {
+	validate := validator.New()
+	validate.RegisterValidation("numeric", util.IsNumeric)
+	return validate.Struct(u)
 }
 
 func (u *UserPayLoad) ToUser(passwordHash string) *User {

@@ -15,9 +15,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db, err := database.NewPostgresConnection(ctx)
+	db, err := database.NewMysqlConnection(ctx)
 	if err != nil {
-		log.Fatal("Fail to connect to postgres: ", err)
+		log.Fatal("Fail to connect to mysql: ", err)
 	}
 
 	if err := db.AutoMigrate(&domain.User{}, &domain.Store{}); err != nil {

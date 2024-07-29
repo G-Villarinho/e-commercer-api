@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -54,7 +55,8 @@ func (s *storeHandler) Create(ctx echo.Context) error {
 		})
 	}
 
-	if err := s.storeService.Create(ctx.Request().Context(), storePayload); err != nil {
+	storeResponse, err := s.storeService.Create(ctx.Request().Context(), storePayload)
+	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
 			Status: http.StatusInternalServerError,
 			Title:  "Internal Server Error",
@@ -64,5 +66,39 @@ func (s *storeHandler) Create(ctx echo.Context) error {
 
 	log.Info("Store created successfully")
 
-	return ctx.NoContent(http.StatusCreated)
+	return ctx.JSON(http.StatusCreated, storeResponse)
+}
+
+func (s *storeHandler) GetAll(ctx echo.Context) error {
+	log := slog.With(
+		slog.String("func", "GetAll"),
+		slog.String("handler", "store"),
+	)
+
+	log.Info("Initializing get all stores process")
+
+	storeResponse, err := s.storeService.GetAll(ctx.Request().Context())
+	if err != nil {
+		log.Error("Failed to get all stores", slog.String("error", err.Error()))
+
+		switch {
+		case errors.Is(err, domain.ErrUserNotFoundInContext):
+			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
+				Status: http.StatusForbidden,
+				Title:  "Forbidden",
+				Detail: "User not found in context. Please log in again.",
+			})
+		case errors.Is(err, domain.ErrStoresNotFound):
+			return ctx.NoContent(http.StatusNoContent)
+		default:
+			return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
+				Status: http.StatusInternalServerError,
+				Title:  "Internal Server Error",
+				Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+			})
+		}
+	}
+
+	log.Info("Successfully retrieved all stores")
+	return ctx.JSON(http.StatusOK, storeResponse)
 }

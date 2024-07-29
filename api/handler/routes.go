@@ -26,16 +26,18 @@ func setupUserRoutes(e *echo.Echo, i *do.Injector) {
 	group.POST("/signIn", userHandler.SignIn)
 	group.PATCH("/name", userHandler.UpdateName, Middleware.CheckLoggedIn(i))
 	group.PATCH("/password", userHandler.UpdatePassword, Middleware.CheckLoggedIn(i))
-	group.GET("/me", userHandler.GetUserInfo, Middleware.ConfirmPassword(i))
-	group.POST("/resend-code", userHandler.ResendCode, Middleware.ResendCode(i), middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
-		Skipper: middleware.DefaultSkipper,
-		Store:   middleware.NewRateLimiterMemoryStore(20),
-	}))
-
+	group.GET("/me", userHandler.GetUserInfo, Middleware.CheckLoggedIn(i))
+	group.PATCH("/email/confirm", userHandler.ConfirmEmail, Middleware.CheckLoggedIn(i))
+	group.POST("/resend-code", userHandler.ResendCode, middleware.RateLimiterWithConfig(
+		middleware.RateLimiterConfig{
+			Skipper: middleware.DefaultSkipper,
+			Store:   middleware.NewRateLimiterMemoryStore(20),
+		}))
 }
 
 func setupStoreRoutes(e *echo.Echo, i *do.Injector) {
 	storeHandler := do.MustInvoke[domain.StoreHandler](i)
 	group := e.Group("/v1/stores", Middleware.CheckLoggedIn(i))
 	group.POST("", storeHandler.Create)
+	group.GET("", storeHandler.GetAll)
 }

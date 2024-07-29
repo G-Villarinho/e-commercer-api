@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/OVillas/e-commercer-api/domain"
-	"github.com/OVillas/e-commercer-api/util"
 	"github.com/labstack/echo/v4"
 	"github.com/meysamhadeli/problem-details"
 	"github.com/samber/do"
@@ -180,6 +179,15 @@ func (u *userHandler) UpdateName(ctx echo.Context) error {
 			})
 		}
 
+		if errors.Is(err, domain.ErrEmailNotConfirmed) {
+			log.Warn("Email not confirmed")
+			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
+				Status: http.StatusForbidden,
+				Title:  "Email Not Confirmed",
+				Detail: "Your email address is not confirmed. Please check your inbox for the confirmation email and follow the instructions to confirm your email address.",
+			})
+		}
+
 		log.Error("Failed to update user name", slog.String("error", err.Error()))
 		return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
 			Status: http.StatusInternalServerError,
@@ -220,6 +228,16 @@ func (u *userHandler) UpdatePassword(ctx echo.Context) error {
 	}
 
 	if err := u.userService.UpdatePassword(ctx.Request().Context(), updatePasswordPayload); err != nil {
+
+		if errors.Is(err, domain.ErrEmailNotConfirmed) {
+			log.Warn("Email not confirmed")
+			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
+				Status: http.StatusForbidden,
+				Title:  "Email Not Confirmed",
+				Detail: "Your email address is not confirmed. Please check your inbox for the confirmation email and follow the instructions to confirm your email address.",
+			})
+		}
+
 		if errors.Is(err, domain.ErrInvalidOldPassword) {
 			log.Warn("Invalid password")
 			return ctx.JSON(http.StatusUnauthorized, &problem.ProblemDetail{
@@ -280,27 +298,24 @@ func (u *userHandler) ResendCode(ctx echo.Context) error {
 
 	log.Info("Initializing resend code process")
 
-	_, err := util.ExtractToken(ctx)
-
 	var resendCodePayload domain.ResendCodePayload
-	if errors.Is(err, domain.ErrSessionNotFound) {
-		if err := ctx.Bind(&resendCodePayload); err != nil {
-			log.Warn("Failed to bind payload", slog.String("error", err.Error()))
-			return ctx.JSON(http.StatusUnprocessableEntity, &problem.ProblemDetail{
-				Status: http.StatusUnprocessableEntity,
-				Title:  "Invalid Request",
-				Detail: "Oops! Something went wrong while processing your request. Please try again later.",
-			})
-		}
 
-		if err := resendCodePayload.Validate(); err != nil {
-			log.Warn("Invalid payload", slog.String("error", err.Error()))
-			return ctx.JSON(http.StatusBadRequest, &problem.ProblemDetail{
-				Status: http.StatusBadRequest,
-				Title:  "Invalid Request",
-				Detail: "The data provided is incorrect or incomplete. Please verify and try again.",
-			})
-		}
+	if err := ctx.Bind(&resendCodePayload); err != nil {
+		log.Warn("Failed to bind payload", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusUnprocessableEntity, &problem.ProblemDetail{
+			Status: http.StatusUnprocessableEntity,
+			Title:  "Invalid Request",
+			Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+		})
+	}
+
+	if err := resendCodePayload.Validate(); err != nil {
+		log.Warn("Invalid payload", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusBadRequest, &problem.ProblemDetail{
+			Status: http.StatusBadRequest,
+			Title:  "Invalid Request",
+			Detail: "The data provided is incorrect or incomplete. Please verify and try again.",
+		})
 	}
 
 	if err := u.userService.ResendCode(ctx.Request().Context(), resendCodePayload); err != nil {
@@ -312,5 +327,85 @@ func (u *userHandler) ResendCode(ctx echo.Context) error {
 	}
 
 	log.Info("code resend/send executed successfully")
+	return ctx.NoContent(http.StatusOK)
+}
+
+func (u *userHandler) ConfirmEmail(ctx echo.Context) error {
+	log := slog.With(
+		slog.String("handler", "user"),
+		slog.String("func", "ConfirmEmail"),
+	)
+
+	log.Info("Initializing confirm email process")
+
+	var confirmEmailPayload domain.ConfirmEmailPayload
+
+	if err := ctx.Bind(&confirmEmailPayload); err != nil {
+		log.Warn("Failed to bind payload", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusUnprocessableEntity, &problem.ProblemDetail{
+			Status: http.StatusUnprocessableEntity,
+			Title:  "Invalid Request",
+			Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+		})
+	}
+
+	if err := confirmEmailPayload.Validate(); err != nil {
+		log.Warn("Invalid payload", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusBadRequest, &problem.ProblemDetail{
+			Status: http.StatusBadRequest,
+			Title:  "Invalid Request",
+			Detail: "The data provided is incorrect or incomplete. Please verify and try again.",
+		})
+	}
+
+	err := u.userService.ConfirmEmail(ctx.Request().Context(), confirmEmailPayload)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFoundInContext):
+			log.Warn("User not found in context", slog.String("error", err.Error()))
+			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
+				Status: http.StatusForbidden,
+				Title:  "Unauthorized",
+				Detail: "You need to be logged in to access this resource.",
+			})
+		case errors.Is(err, domain.ErrOTPExpires):
+			log.Warn("OTP has expired", slog.String("error", err.Error()))
+			return ctx.JSON(http.StatusUnauthorized, &problem.ProblemDetail{
+				Status: http.StatusUnauthorized,
+				Title:  "OTP Expired",
+				Detail: "The OTP code has expired. Please request a new code.",
+			})
+		case errors.Is(err, domain.ErrOTPInvalid):
+			log.Warn("Invalid OTP", slog.String("error", err.Error()))
+			return ctx.JSON(http.StatusUnauthorized, &problem.ProblemDetail{
+				Status: http.StatusUnauthorized,
+				Title:  "Invalid OTP",
+				Detail: "The OTP code provided is invalid. Please check the code and try again.",
+			})
+		case errors.Is(err, domain.ErrSessionNotFound):
+			log.Warn("Session not found", slog.String("error", err.Error()))
+			return ctx.JSON(http.StatusUnauthorized, &problem.ProblemDetail{
+				Status: http.StatusUnauthorized,
+				Title:  "Session Not Found",
+				Detail: "The session was not found. Please log in and try again.",
+			})
+		case errors.Is(err, domain.ErrTokenInvalid):
+			log.Warn("Invalid token", slog.String("error", err.Error()))
+			return ctx.JSON(http.StatusUnauthorized, &problem.ProblemDetail{
+				Status: http.StatusUnauthorized,
+				Title:  "Invalid Token",
+				Detail: "The token provided is invalid. Please log in and try again.",
+			})
+		default:
+			log.Error("Failed to confirm email", slog.String("error", err.Error()))
+			return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
+				Status: http.StatusInternalServerError,
+				Title:  "Internal Server Error",
+				Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+			})
+		}
+	}
+
+	log.Info("Email confirmed successfully")
 	return ctx.NoContent(http.StatusOK)
 }

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -11,10 +12,14 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	ErrStoresNotFound = errors.New("stores not found for this userID")
+)
+
 type Store struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey;column:id"`
+	ID        uuid.UUID      `gorm:"type:char(36);primaryKey;column:id"`
 	Name      string         `gorm:"size:100;not null;column:name"`
-	UserID    uuid.UUID      `gorm:"column:userId;not null"`
+	UserID    uuid.UUID      `gorm:"type:char(36);column:userId;not null"`
 	User      User           `gorm:"foreignKey:UserID"`
 	CreatedAt time.Time      `gorm:"column:createdAt"`
 	UpdatedAt time.Time      `gorm:"column:updatedAt"`
@@ -33,14 +38,17 @@ type StoreResponse struct {
 
 type StoreHandler interface {
 	Create(ctx echo.Context) error
+	GetAll(ctx echo.Context) error
 }
 
 type StoreService interface {
-	Create(ctx context.Context, storePayload StorePayload) error
+	Create(ctx context.Context, storePayload StorePayload) (*StoreResponse, error)
+	GetAll(ctx context.Context) ([]*StoreResponse, error)
 }
 
 type StoreRepository interface {
 	Create(ctx context.Context, store Store) error
+	GetAll(ctx context.Context, userID uuid.UUID) ([]*Store, error)
 }
 
 func (s *StorePayload) trim() {
@@ -59,7 +67,6 @@ func (s *StorePayload) ToStore(userID uuid.UUID) *Store {
 		Name:      s.Name,
 		UserID:    userID,
 		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
 	}
 }
 

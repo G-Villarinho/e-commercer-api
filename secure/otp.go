@@ -30,13 +30,3 @@ func GenerateNumericOTP(secret string) (string, error) {
 	}
 	return otp, nil
 }
-
-func VerifyOTP(secret, code string) bool {
-	valid, err := totp.ValidateCustom(code, secret, time.Now().UTC(), totp.ValidateOpts{
-		Period:    30,
-		Skew:      1,
-		Digits:    otp.DigitsSix,
-		Algorithm: otp.AlgorithmSHA1,
-	})
-	return valid && err == nil
-}

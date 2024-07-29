@@ -7,7 +7,6 @@ import (
 	"github.com/OVillas/e-commercer-api/domain"
 	"github.com/OVillas/e-commercer-api/middleware"
 	"github.com/OVillas/e-commercer-api/secure"
-	"github.com/google/uuid"
 	"github.com/samber/do"
 )
 
@@ -128,34 +127,6 @@ func (u *userService) SignIn(ctx context.Context, signInPayload domain.SignInPay
 	}, nil
 }
 
-func (u *userService) CheckEmailConfirmation(ctx context.Context, email string) error {
-	log := slog.With(
-		slog.String("service", "user"),
-		slog.String("func", "CheckEmailConfirmation"),
-	)
-
-	log.Info("Initializing email confirmation check process")
-
-	user, err := u.userRespository.GetByEmail(ctx, email)
-	if err != nil {
-		log.Error("Failed to get user by email", slog.String("error", err.Error()))
-		return err
-	}
-
-	if user == nil {
-		log.Warn("User not found")
-		return domain.ErrUserNotFound
-	}
-
-	if !user.EmailConfirmed {
-		log.Warn("User email not confirmed")
-		return domain.ErrEmailNotConfirmed
-	}
-
-	log.Info("check User email confirmed executed successfully")
-	return nil
-}
-
 func (u *userService) UpdateName(ctx context.Context, name string) error {
 	log := slog.With(
 		slog.String("service", "user"),
@@ -164,17 +135,28 @@ func (u *userService) UpdateName(ctx context.Context, name string) error {
 
 	log.Info("Initializing user name update process")
 
-	user, ok := ctx.Value(middleware.UserKey).(*domain.Session)
-	if !ok || user == nil {
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
 		return domain.ErrUserNotFoundInContext
 	}
 
-	if user.Name == name {
+	if session.Name == name {
 		log.Warn("New name is the same as the old name")
 		return domain.ErrNameIsSame
 	}
 
-	if err := u.userRespository.UpdateName(ctx, user.UserID, name); err != nil {
+	user, err := u.userRespository.GetByID(ctx, session.UserID)
+	if err != nil {
+		log.Error("Failed to get user by email", slog.String("error", err.Error()))
+		return err
+	}
+
+	if !user.EmailConfirmed {
+		log.Warn("User email not confirmed")
+		return domain.ErrEmailNotConfirmed
+	}
+
+	if err := u.userRespository.UpdateName(ctx, session.UserID, name); err != nil {
 		log.Error("Failed to update user name", slog.String("error", err.Error()))
 		return err
 	}
@@ -196,22 +178,21 @@ func (u *userService) UpdatePassword(ctx context.Context, updatePasswordPayload 
 
 	log.Info("Initializing user password update process")
 
-	userResponse, ok := ctx.Value(middleware.UserKey).(*domain.UserResponse)
-	if !ok || userResponse == nil {
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
 		log.Warn("User not found in context")
 		return domain.ErrUserNotFoundInContext
 	}
 
-	userID, err := uuid.Parse(userResponse.ID)
-	if err != nil {
-		log.Error("Failed to parse user ID", slog.String("error", err.Error()))
-		return err
-	}
-
-	user, err := u.userRespository.GetByID(ctx, userID)
+	user, err := u.userRespository.GetByID(ctx, session.UserID)
 	if err != nil {
 		log.Error("Failed to get user by ID", slog.String("error", err.Error()))
 		return err
+	}
+
+	if !user.EmailConfirmed {
+		log.Warn("User email not confirmed")
+		return domain.ErrEmailNotConfirmed
 	}
 
 	if err := secure.CheckPassword(user.PasswordHash, updatePasswordPayload.OldPassword); err != nil {
@@ -230,7 +211,7 @@ func (u *userService) UpdatePassword(ctx context.Context, updatePasswordPayload 
 		return domain.ErrHashingPassword
 	}
 
-	if err := u.userRespository.UpdatePassword(ctx, userID, string(passwordHash)); err != nil {
+	if err := u.userRespository.UpdatePassword(ctx, user.ID, string(passwordHash)); err != nil {
 		log.Error("Failed to update user password", slog.String("error", err.Error()))
 		return err
 	}
@@ -252,12 +233,13 @@ func (u *userService) GetUserInfo(ctx context.Context) (*domain.UserResponse, er
 
 	log.Info("Initializing get user info process")
 
-	user, ok := ctx.Value(middleware.UserKey).(*domain.Session)
-	if !ok || user == nil {
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
 		return nil, domain.ErrUserNotFoundInContext
 	}
+
 	log.Info("user info requested successfully")
-	return user.ToResponse(), nil
+	return session.ToResponse(), nil
 }
 
 func (u *userService) ResendCode(ctx context.Context, resendCodePayload domain.ResendCodePayload) error {
@@ -268,16 +250,7 @@ func (u *userService) ResendCode(ctx context.Context, resendCodePayload domain.R
 
 	log.Info("Initializing resend code process")
 
-	userSession, _ := ctx.Value(middleware.UserKey).(*domain.Session)
-
-	var email string
-	if userSession != nil {
-		email = userSession.Email
-	} else {
-		email = resendCodePayload.Email
-	}
-
-	user, err := u.userRespository.GetByEmail(ctx, email)
+	user, err := u.userRespository.GetByEmail(ctx, resendCodePayload.Email)
 	if err != nil {
 		log.Error("Failed to get user by email", slog.String("error", err.Error()))
 		return err
@@ -289,5 +262,44 @@ func (u *userService) ResendCode(ctx context.Context, resendCodePayload domain.R
 	}
 
 	log.Info("confirmatio code send/resend successfully")
+	return nil
+}
+
+func (u *userService) ConfirmEmail(ctx context.Context, confirmEmailPayload domain.ConfirmEmailPayload) error {
+	log := slog.With(
+		slog.String("service", "user"),
+		slog.String("func", "ConfirmEmail"),
+	)
+
+	log.Info("Starting email confirmation process")
+
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
+		log.Error("Failed to retrieve user session from context")
+		return domain.ErrUserNotFoundInContext
+	}
+
+	OTP, err := u.sessionService.GetOTP(ctx, session.Email)
+	if err != nil {
+		log.Error("Failed to retrieve OTP from session service", slog.String("error", err.Error()))
+		return err
+	}
+
+	if OTP == "" {
+		log.Warn("OTP has expired or is invalid")
+		return domain.ErrOTPExpires
+	}
+
+	if OTP != confirmEmailPayload.OTP {
+		log.Warn("Provided OTP does not match the stored OTP")
+		return domain.ErrOTPInvalid
+	}
+
+	if err := u.userRespository.UpdateConfirmEmail(ctx, session.UserID); err != nil {
+		log.Error("Failed to update user's email confirmation status in the repository", slog.String("error", err.Error()))
+		return err
+	}
+
+	log.Info("Email confirmed successfully for user", slog.String("userID", session.UserID.String()))
 	return nil
 }

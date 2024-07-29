@@ -34,7 +34,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db, err := database.NewPostgresConnection(ctx)
+	db, err := database.NewMysqlConnection(ctx)
 	if err != nil {
 		log.Fatal("Fail to connect to mysql: ", err)
 	}
@@ -63,7 +63,7 @@ func main() {
 	do.Provide(i, service.NewUserService)
 	do.Provide(i, repository.NewUserRepository)
 	do.Provide(i, service.NewSessionService)
-	do.Provide(i, repository.NewUserSessionRepository)
+	do.Provide(i, repository.NewSessionRepository)
 	do.Provide(i, handler.NewStoreHandler)
 	do.Provide(i, service.NewStoreService)
 	do.Provide(i, repository.NewStoreRepository)

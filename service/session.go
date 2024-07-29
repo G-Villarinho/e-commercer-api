@@ -2,11 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
+	"github.com/OVillas/e-commercer-api/config"
 	"github.com/OVillas/e-commercer-api/domain"
 	"github.com/OVillas/e-commercer-api/middleware"
-	"github.com/OVillas/e-commercer-api/util"
+	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/samber/do"
 )
 
@@ -42,7 +46,7 @@ func (t *sessionService) Create(ctx context.Context, user domain.User) (string, 
 
 	log.Info("Initializing token creation process")
 
-	token, err := util.CreateToken(user)
+	token, err := t.createToken(user)
 	if err != nil {
 		log.Error("Failed to create token", slog.String("error", err.Error()))
 		return "", err
@@ -64,29 +68,29 @@ func (t *sessionService) GetUser(ctx context.Context, token string) (*domain.Ses
 
 	log.Info("Initializing token retrieval process")
 
-	userID, err := util.ExtractUserIDFromToken(token)
+	sessionToken, err := t.extractSessionFromToken(token)
 	if err != nil {
 		log.Error("Failed to extract user ID from token", slog.String("error", err.Error()))
 		return nil, err
 	}
 
-	user, err := t.sessionRepository.GetUser(ctx, userID)
+	session, err := t.sessionRepository.GetUser(ctx, sessionToken.UserID.String())
 	if err != nil {
 		log.Error("Failed to retrieve user", slog.String("error", err.Error()))
 		return nil, err
 	}
 
-	if user == nil {
+	if session == nil {
 		log.Error("Session not found")
 		return nil, domain.ErrSessionNotFound
 	}
 
-	if token != user.Token {
+	if token != session.Token {
 		log.Error("Session mismatch")
 		return nil, domain.ErrTokenInvalid
 	}
 
-	return user, nil
+	return session, nil
 }
 
 func (t *sessionService) Update(ctx context.Context) error {
@@ -132,4 +136,78 @@ func (t *sessionService) SaveOTP(ctx context.Context, email string, otp string) 
 
 	log.Info("OTP saved successfully")
 	return nil
+}
+
+func (t *sessionService) GetOTP(ctx context.Context, email string) (string, error) {
+	log := slog.With(
+		slog.String("service", "token"),
+		slog.String("func", "getOTP"),
+	)
+
+	log.Info("Initializing OTP get process")
+	OTP, err := t.sessionRepository.GetOTP(ctx, email)
+	if err != nil {
+		if errors.Is(err, domain.ErrOTPNotFound) {
+			log.Warn("otp not found")
+			return "", nil
+		}
+
+		return "", err
+	}
+
+	log.Info("Initializing OTP get completed")
+	return OTP, nil
+}
+
+func (t *sessionService) createToken(user domain.User) (string, error) {
+
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+		"id":        user.ID,
+		"name":      user.Name,
+		"email":     user.Email,
+		"avatarURL": user.AvatarURL,
+	})
+
+	tokenString, err := token.SignedString(config.Env.PrivateKey)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+func (t *sessionService) extractSessionFromToken(tokenString string) (*domain.Session, error) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, domain.ErrTokenInvalid
+	}
+
+	jsonStr, err := jsoniter.Marshal(claims)
+	if err != nil {
+		return nil, err
+	}
+
+	userIDStr, ok := claims["id"].(string)
+	if !ok {
+		return nil, domain.ErrTokenInvalid
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, domain.ErrTokenInvalid
+	}
+
+	var session domain.Session
+	err = jsoniter.Unmarshal(jsonStr, &session)
+	if err != nil {
+		return nil, err
+	}
+	session.UserID = userID
+
+	return &session, nil
 }

@@ -132,3 +132,20 @@ func (u *userRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passw
 	log.Info("User password updated successfully")
 	return nil
 }
+
+func (u *userRepository) UpdateConfirmEmail(ctx context.Context, id uuid.UUID) error {
+	log := slog.With(
+		slog.String("repository", "user"),
+		slog.String("func", "UpdateConfirmEmail"),
+	)
+
+	log.Info("Initializing user name update process")
+
+	if err := u.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("emailConfirmed", true).Error; err != nil {
+		log.Error("Failed to update user name", slog.String("error", err.Error()))
+		return err
+	}
+
+	log.Info("User email confirm updated successfully")
+	return nil
+}
