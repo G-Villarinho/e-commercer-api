@@ -261,7 +261,7 @@ func (u *userService) ResendCode(ctx context.Context, resendCodePayload domain.R
 		return err
 	}
 
-	log.Info("confirmatio code send/resend successfully")
+	log.Info("confirmation code send/resend successfully")
 	return nil
 }
 
@@ -301,5 +301,39 @@ func (u *userService) ConfirmEmail(ctx context.Context, confirmEmailPayload doma
 	}
 
 	log.Info("Email confirmed successfully for user", slog.String("userID", session.UserID.String()))
+	return nil
+}
+
+func (u *userService) CheckStatus(ctx context.Context) error {
+	log := slog.With(
+		slog.String("service", "user"),
+		slog.String("func", "CheckStatus"),
+	)
+
+	log.Info("Starting check user status process")
+
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
+		log.Warn("User not logged")
+		return domain.ErrUserNotFoundInContext
+	}
+
+	user, err := u.userRespository.GetByID(ctx, session.UserID)
+	if err != nil {
+		log.Error("Failed to get user by id", slog.String("error", err.Error()))
+		return err
+	}
+
+	if user == nil {
+		log.Warn("user not found whith this id")
+		return domain.ErrUserNotFound
+	}
+
+	if !user.EmailConfirmed {
+		log.Warn("User email not confirmed")
+		return domain.ErrEmailNotConfirmed
+	}
+
+	log.Info("check user status executed succefully")
 	return nil
 }

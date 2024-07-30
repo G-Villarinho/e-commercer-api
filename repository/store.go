@@ -38,8 +38,8 @@ func NewStoreRepository(i *do.Injector) (domain.StoreRepository, error) {
 
 func (s *storeRepository) Create(ctx context.Context, store domain.Store) error {
 	log := slog.With(
-		slog.String("repository", "store"),
 		slog.String("func", "Create"),
+		slog.String("repository", "store"),
 	)
 
 	log.Info("Initializing store creation process")
@@ -59,6 +59,8 @@ func (s *storeRepository) GetAll(ctx context.Context, userID uuid.UUID) ([]*doma
 		slog.String("func", "GetAll"),
 	)
 
+	log.Info("Initializing get all stores process")
+
 	var stores []*domain.Store
 	if err := s.db.WithContext(ctx).Where("userId = ?", userID.String()).Find(&stores).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -73,4 +75,43 @@ func (s *storeRepository) GetAll(ctx context.Context, userID uuid.UUID) ([]*doma
 	log.Info("stores found successfully")
 
 	return stores, nil
+}
+
+func (s *storeRepository) GetByID(ctx context.Context, ID uuid.UUID) (*domain.Store, error) {
+	log := slog.With(
+		slog.String("func", "GetByID"),
+		slog.String("repository", "store"),
+	)
+
+	log.Info("Initializing get store by id process")
+
+	var store *domain.Store
+	if err := s.db.WithContext(ctx).Where("id = ?", ID.String()).First(&store).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn("store not found")
+			return nil, nil
+		}
+
+		log.Error("Failed to stores", slog.String("error", err.Error()))
+		return nil, err
+	}
+	log.Info("get store by id excuted sucessfully")
+	return store, nil
+}
+
+func (s *storeRepository) UpdateName(ctx context.Context, name string, ID uuid.UUID) error {
+	log := slog.With(
+		slog.String("func", "UpdateName"),
+		slog.String("repository", "store"),
+	)
+
+	log.Info("Initializing update store name process")
+
+	if err := s.db.WithContext(ctx).Model(domain.Store{}).Where("id = ?", ID.String()).Update("name", name).Error; err != nil {
+		log.Error("Failed to update store name", slog.String("error", err.Error()))
+		return err
+	}
+
+	log.Info("store name updated successfully")
+	return nil
 }

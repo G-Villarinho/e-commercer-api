@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/OVillas/e-commercer-api/domain"
@@ -84,4 +85,42 @@ func (s *storeService) GetAll(ctx context.Context) ([]*domain.StoreResponse, err
 
 	log.Info("Store retrieval process executed successfully")
 	return storesResponse, nil
+}
+
+func (s *storeService) UpdateName(ctx context.Context, updateStoreNamePayload domain.StoreNameUpdatePayload) error {
+	log := slog.With(
+		slog.String("service", "store"),
+		slog.String("func", "GetAll"),
+	)
+
+	log.Info("Initializing store name updated process")
+
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
+		return domain.ErrUserNotFoundInContext
+	}
+
+	store, err := s.storeRepository.GetByID(ctx, updateStoreNamePayload.ID)
+	if err != nil {
+		log.Error("Failed to get store by id", slog.String("error", err.Error()))
+		return err
+	}
+
+	if store == nil {
+		log.Warn("store not found with this id")
+		return domain.ErrStoreNotFound
+	}
+
+	if store.UserID != session.UserID {
+		log.Error("Unauthorized attempt to update store name", slog.String("storeID", store.ID.String()), slog.String("userID", session.UserID.String()))
+		return fmt.Errorf("%w: user %s is not authorized to update store %s", domain.ErrUnauthorizedAction, session.UserID.String(), store.ID.String())
+	}
+
+	if err := s.storeRepository.UpdateName(ctx, updateStoreNamePayload.Name, updateStoreNamePayload.ID); err != nil {
+		log.Error("Failed to update store name", slog.String("error", err.Error()))
+		return err
+	}
+
+	log.Info("Store name updated successfully", slog.String("storeID", store.ID.String()), slog.String("newName", store.Name))
+	return nil
 }

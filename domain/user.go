@@ -96,6 +96,7 @@ type UserService interface {
 	GetUserInfo(ctx context.Context) (*UserResponse, error)
 	ResendCode(ctx context.Context, resendCodePayload ResendCodePayload) error
 	ConfirmEmail(ctx context.Context, confirmEmailPayload ConfirmEmailPayload) error
+	CheckStatus(ctx context.Context) error
 }
 
 type UserRepository interface {

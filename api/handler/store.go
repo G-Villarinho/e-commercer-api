@@ -14,6 +14,7 @@ import (
 type storeHandler struct {
 	i            *do.Injector
 	storeService domain.StoreService
+	userService  domain.UserService
 }
 
 func NewStoreHandler(i *do.Injector) (domain.StoreHandler, error) {
@@ -22,9 +23,15 @@ func NewStoreHandler(i *do.Injector) (domain.StoreHandler, error) {
 		return nil, err
 	}
 
+	userService, err := do.Invoke[domain.UserService](i)
+	if err != nil {
+		return nil, err
+	}
+
 	return &storeHandler{
 		i:            i,
 		storeService: storeService,
+		userService:  userService,
 	}, nil
 }
 
@@ -101,4 +108,60 @@ func (s *storeHandler) GetAll(ctx echo.Context) error {
 
 	log.Info("Successfully retrieved all stores")
 	return ctx.JSON(http.StatusOK, storeResponse)
+}
+
+func (s *storeHandler) UpdateName(ctx echo.Context) error {
+	log := slog.With(
+		slog.String("handler", "store"),
+		slog.String("func", "UpdateName"),
+	)
+
+	log.Info("Initializing store name update process")
+
+	var storeNameUpdatePayload domain.StoreNameUpdatePayload
+	if err := ctx.Bind(&storeNameUpdatePayload); err != nil {
+		log.Warn("Failed to bind payload", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusUnprocessableEntity, &problem.ProblemDetail{
+			Status: http.StatusUnprocessableEntity,
+			Title:  "Invalid Request",
+			Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+		})
+	}
+
+	if err := storeNameUpdatePayload.Validate(); err != nil {
+		log.Warn("Invalid payload", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusBadRequest, &problem.ProblemDetail{
+			Status: http.StatusBadRequest,
+			Title:  "Invalid Request",
+			Detail: "The data provided is incorrect or incomplete. Please verify and try again.",
+		})
+	}
+
+	if err := s.userService.CheckStatus(ctx.Request().Context()); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrEmailNotConfirmed):
+			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
+				Status: http.StatusForbidden,
+				Title:  "Unautorizes",
+				Detail: "You need to confirm your email to use this feature",
+			})
+		default:
+			return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
+				Status: http.StatusInternalServerError,
+				Title:  "Internal Server Error",
+				Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+			})
+		}
+	}
+
+	if err := s.storeService.UpdateName(ctx.Request().Context(), storeNameUpdatePayload); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
+			Status: http.StatusInternalServerError,
+			Title:  "Internal Server Error",
+			Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+		})
+	}
+
+	log.Info("Store name updated successfully")
+	return ctx.NoContent(http.StatusOK)
 }
