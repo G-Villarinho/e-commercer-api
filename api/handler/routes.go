@@ -40,4 +40,5 @@ func setupStoreRoutes(e *echo.Echo, i *do.Injector) {
 	group := e.Group("/v1/stores", Middleware.CheckLoggedIn(i))
 	group.POST("", storeHandler.Create)
 	group.GET("", storeHandler.GetAll)
+	group.PATCH("/name", storeHandler.UpdateName)
 }
