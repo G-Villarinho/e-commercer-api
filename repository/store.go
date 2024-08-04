@@ -99,7 +99,7 @@ func (s *storeRepository) GetByID(ctx context.Context, ID uuid.UUID) (*domain.St
 	return store, nil
 }
 
-func (s *storeRepository) UpdateName(ctx context.Context, name string, ID uuid.UUID) error {
+func (s *storeRepository) UpdateName(ctx context.Context, name string, storeID uuid.UUID) error {
 	log := slog.With(
 		slog.String("func", "UpdateName"),
 		slog.String("repository", "store"),
@@ -107,11 +107,28 @@ func (s *storeRepository) UpdateName(ctx context.Context, name string, ID uuid.U
 
 	log.Info("Initializing update store name process")
 
-	if err := s.db.WithContext(ctx).Model(domain.Store{}).Where("id = ?", ID.String()).Update("name", name).Error; err != nil {
+	if err := s.db.WithContext(ctx).Model(domain.Store{}).Where("id = ?", storeID.String()).Update("name", name).Error; err != nil {
 		log.Error("Failed to update store name", slog.String("error", err.Error()))
 		return err
 	}
 
 	log.Info("store name updated successfully")
+	return nil
+}
+
+func (s *storeRepository) Delete(ctx context.Context, storeID uuid.UUID) error {
+	log := slog.With(
+		slog.String("repository", "store"),
+		slog.String("func", "Delete"),
+	)
+
+	log.Info("Initializing delete store process")
+
+	if err := s.db.WithContext(ctx).Where("id = ?", storeID.String()).Delete(&domain.Store{}).Error; err != nil {
+		log.Error("Failed to delete store", slog.String("error", err.Error()))
+		return err
+	}
+
+	log.Info("store deleted successfully")
 	return nil
 }

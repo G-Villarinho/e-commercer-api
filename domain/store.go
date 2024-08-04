@@ -33,8 +33,7 @@ type StorePayload struct {
 	Name string `json:"name" validate:"required,min=1,max=100"`
 }
 type StoreNameUpdatePayload struct {
-	ID   uuid.UUID `json:"id" validate:"required"`
-	Name string    `json:"name" validate:"required,min=1,max=100"`
+	Name string `json:"name" validate:"required,min=1,max=100"`
 }
 
 type StoreResponse struct {
@@ -47,19 +46,22 @@ type StoreHandler interface {
 	Create(ctx echo.Context) error
 	GetAll(ctx echo.Context) error
 	UpdateName(ctx echo.Context) error
+	Delete(ctx echo.Context) error
 }
 
 type StoreService interface {
 	Create(ctx context.Context, storePayload StorePayload) (*StoreResponse, error)
 	GetAll(ctx context.Context) ([]*StoreResponse, error)
-	UpdateName(ctx context.Context, updateStoreNamePayload StoreNameUpdatePayload) error
+	UpdateName(ctx context.Context, storeID uuid.UUID, updateStoreNamePayload StoreNameUpdatePayload) error
+	Delete(ctx context.Context, storeID uuid.UUID) error
 }
 
 type StoreRepository interface {
 	Create(ctx context.Context, store Store) error
 	GetAll(ctx context.Context, userID uuid.UUID) ([]*Store, error)
-	GetByID(ctx context.Context, ID uuid.UUID) (*Store, error)
+	GetByID(ctx context.Context, storeID uuid.UUID) (*Store, error)
 	UpdateName(ctx context.Context, name string, ID uuid.UUID) error
+	Delete(ctx context.Context, storeID uuid.UUID) error
 }
 
 func (s *StorePayload) trim() {

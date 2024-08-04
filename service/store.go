@@ -7,6 +7,7 @@ import (
 
 	"github.com/OVillas/e-commercer-api/domain"
 	"github.com/OVillas/e-commercer-api/middleware"
+	"github.com/google/uuid"
 	"github.com/samber/do"
 )
 
@@ -87,7 +88,7 @@ func (s *storeService) GetAll(ctx context.Context) ([]*domain.StoreResponse, err
 	return storesResponse, nil
 }
 
-func (s *storeService) UpdateName(ctx context.Context, updateStoreNamePayload domain.StoreNameUpdatePayload) error {
+func (s *storeService) UpdateName(ctx context.Context, storeID uuid.UUID, updateStoreNamePayload domain.StoreNameUpdatePayload) error {
 	log := slog.With(
 		slog.String("service", "store"),
 		slog.String("func", "GetAll"),
@@ -100,7 +101,7 @@ func (s *storeService) UpdateName(ctx context.Context, updateStoreNamePayload do
 		return domain.ErrUserNotFoundInContext
 	}
 
-	store, err := s.storeRepository.GetByID(ctx, updateStoreNamePayload.ID)
+	store, err := s.storeRepository.GetByID(ctx, storeID)
 	if err != nil {
 		log.Error("Failed to get store by id", slog.String("error", err.Error()))
 		return err
@@ -116,11 +117,49 @@ func (s *storeService) UpdateName(ctx context.Context, updateStoreNamePayload do
 		return fmt.Errorf("%w: user %s is not authorized to update store %s", domain.ErrUnauthorizedAction, session.UserID.String(), store.ID.String())
 	}
 
-	if err := s.storeRepository.UpdateName(ctx, updateStoreNamePayload.Name, updateStoreNamePayload.ID); err != nil {
+	if err := s.storeRepository.UpdateName(ctx, updateStoreNamePayload.Name, storeID); err != nil {
 		log.Error("Failed to update store name", slog.String("error", err.Error()))
 		return err
 	}
 
 	log.Info("Store name updated successfully", slog.String("storeID", store.ID.String()), slog.String("newName", store.Name))
+	return nil
+}
+
+func (s *storeService) Delete(ctx context.Context, storeID uuid.UUID) error {
+	log := slog.With(
+		slog.String("service", "store"),
+		slog.String("func", "Delete"),
+	)
+
+	log.Info("Initializing delete store process")
+
+	session, ok := ctx.Value(middleware.UserKey).(*domain.Session)
+	if !ok || session == nil {
+		return domain.ErrUserNotFoundInContext
+	}
+
+	store, err := s.storeRepository.GetByID(ctx, storeID)
+	if err != nil {
+		log.Error("Failed to get store by id", slog.String("error", err.Error()))
+		return err
+	}
+
+	if store == nil {
+		log.Warn("store not found with this id")
+		return domain.ErrStoreNotFound
+	}
+
+	if store.UserID != session.UserID {
+		log.Error("Unauthorized attempt to delete store", slog.String("storeID", store.ID.String()), slog.String("userID", session.UserID.String()))
+		return fmt.Errorf("%w: user %s is not authorized to delete store %s", domain.ErrUnauthorizedAction, session.UserID.String(), store.ID.String())
+	}
+
+	if err := s.storeRepository.Delete(ctx, storeID); err != nil {
+		log.Error("Failed to delete store", slog.String("error", err.Error()))
+		return err
+	}
+
+	log.Info("Store deleted successfully", slog.String("storeID", store.ID.String()))
 	return nil
 }

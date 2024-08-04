@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/meysamhadeli/problem-details"
 	"github.com/samber/do"
@@ -118,6 +119,18 @@ func (s *storeHandler) UpdateName(ctx echo.Context) error {
 
 	log.Info("Initializing store name update process")
 
+	param := ctx.Param("storeId")
+
+	storeID, err := uuid.Parse(param)
+	if err != nil {
+		log.Warn("Invalid params", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusBadRequest, &problem.ProblemDetail{
+			Status: http.StatusBadRequest,
+			Title:  "Invalid Request",
+			Detail: "The data provided is incorrect or incomplete. Please verify and try again.",
+		})
+	}
+
 	var storeNameUpdatePayload domain.StoreNameUpdatePayload
 	if err := ctx.Bind(&storeNameUpdatePayload); err != nil {
 		log.Warn("Failed to bind payload", slog.String("error", err.Error()))
@@ -142,7 +155,7 @@ func (s *storeHandler) UpdateName(ctx echo.Context) error {
 		case errors.Is(err, domain.ErrEmailNotConfirmed):
 			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
 				Status: http.StatusForbidden,
-				Title:  "Unautorizes",
+				Title:  "unauthorized",
 				Detail: "You need to confirm your email to use this feature",
 			})
 		default:
@@ -154,7 +167,7 @@ func (s *storeHandler) UpdateName(ctx echo.Context) error {
 		}
 	}
 
-	if err := s.storeService.UpdateName(ctx.Request().Context(), storeNameUpdatePayload); err != nil {
+	if err := s.storeService.UpdateName(ctx.Request().Context(), storeID, storeNameUpdatePayload); err != nil {
 		return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
 			Status: http.StatusInternalServerError,
 			Title:  "Internal Server Error",
@@ -164,4 +177,53 @@ func (s *storeHandler) UpdateName(ctx echo.Context) error {
 
 	log.Info("Store name updated successfully")
 	return ctx.NoContent(http.StatusOK)
+}
+
+func (s *storeHandler) Delete(ctx echo.Context) error {
+	log := slog.With(
+		slog.String("handler", "store"),
+		slog.String("func", "UpdateName"),
+	)
+
+	log.Info("Initializing delete store process")
+
+	param := ctx.Param("storeId")
+
+	storeID, err := uuid.Parse(param)
+	if err != nil {
+		log.Warn("Invalid params", slog.String("error", err.Error()))
+		return ctx.JSON(http.StatusBadRequest, &problem.ProblemDetail{
+			Status: http.StatusBadRequest,
+			Title:  "Invalid Request",
+			Detail: "The data provided is incorrect or incomplete. Please verify and try again.",
+		})
+	}
+
+	if err := s.userService.CheckStatus(ctx.Request().Context()); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrEmailNotConfirmed):
+			return ctx.JSON(http.StatusForbidden, &problem.ProblemDetail{
+				Status: http.StatusForbidden,
+				Title:  "Unauthorized",
+				Detail: "You need to confirm your email to use this feature",
+			})
+		default:
+			return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
+				Status: http.StatusInternalServerError,
+				Title:  "Internal Server Error",
+				Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+			})
+		}
+	}
+
+	if err := s.storeService.Delete(ctx.Request().Context(), storeID); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, &problem.ProblemDetail{
+			Status: http.StatusInternalServerError,
+			Title:  "Internal Server Error",
+			Detail: "Oops! Something went wrong while processing your request. Please try again later.",
+		})
+	}
+
+	log.Info("Store deleted successfully")
+	return ctx.NoContent(http.StatusNoContent)
 }
