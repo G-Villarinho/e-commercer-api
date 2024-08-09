@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/OVillas/e-commercer-api/api/handler"
+	"github.com/OVillas/e-commercer-api/client"
 	"github.com/OVillas/e-commercer-api/config"
 	"github.com/OVillas/e-commercer-api/config/database"
 	"github.com/OVillas/e-commercer-api/repository"
@@ -68,6 +69,10 @@ func main() {
 	do.Provide(i, service.NewStoreService)
 	do.Provide(i, repository.NewStoreRepository)
 	do.Provide(i, service.NewEmailService)
+	do.Provide(i, client.NewCloudFlareService)
+	do.Provide(i, handler.NewBillboardHandler)
+	do.Provide(i, service.NewBillboardService)
+	do.Provide(i, repository.NewBillboardRepository)
 
 	handler.SetupRoutes(e, i)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Env.APIPort)))

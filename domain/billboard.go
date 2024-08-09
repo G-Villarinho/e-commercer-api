@@ -1,9 +1,15 @@
 package domain
 
 import (
+	"context"
+	"mime/multipart"
+	"strings"
 	"time"
 
+	"github.com/OVillas/e-commercer-api/util"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
@@ -19,8 +25,66 @@ type Billboard struct {
 }
 
 type BillboardPayload struct {
-	Label    string `json:"label" validate:"required,min=1,max=100"`
-	ImageURL string `json:"imageUrl" validate:"required,min=1,max=400"`
+	Label string                `json:"label" validate:"required,min=1,max=100"`
+	Image *multipart.FileHeader `json:"image" validate:"required"`
+}
+
+type BillboardRespose struct {
+	ID        string    `json:"id"`
+	Label     string    `json:"label"`
+	StoreID   string    `json:"storeId"`
+	ImageURL  string    `json:"imageUrl"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type BillboardHandler interface {
+	Create(ctx echo.Context) error
+}
+
+type BillboardService interface {
+	Create(ctx context.Context, storeID uuid.UUID, billboardPayload BillboardPayload) (*BillboardRespose, error)
+}
+
+type BillboardRepository interface {
+	Create(ctx context.Context, billboard Billboard) error
+}
+
+func (b *BillboardPayload) trim() {
+	b.Label = strings.TrimSpace(b.Label)
+}
+
+func (b *BillboardPayload) Validate() error {
+	b.trim()
+	validate := validator.New()
+	if err := validate.Struct(b); err != nil {
+		return err
+	}
+
+	if err := util.ValidateFile(b.Image); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *BillboardPayload) ToBillboard(imageURL string, StoreID uuid.UUID) *Billboard {
+	return &Billboard{
+		ID:        uuid.New(),
+		Label:     b.Label,
+		StoreID:   StoreID,
+		ImageURL:  imageURL,
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+func (b *Billboard) ToResponse() *BillboardRespose {
+	return &BillboardRespose{
+		ID:        b.ID.String(),
+		Label:     b.Label,
+		StoreID:   b.StoreID.String(),
+		ImageURL:  b.ImageURL,
+		CreatedAt: b.CreatedAt,
+	}
 }
 
 func (Billboard) TableName() string {

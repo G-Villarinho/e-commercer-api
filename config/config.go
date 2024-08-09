@@ -15,19 +15,21 @@ import (
 var Env Environment
 
 type Environment struct {
-	ConnectionString string `env:"CONNECTION_STRING"`
-	RedisAdress      string `env:"REDIS_ADRESS"`
-	RedisPassword    string `env:"REDIS_PASSWORD"`
-	RedisDB          int    `env:"REDIS_DB"`
-	MongoURI         string `env:"MONGO_URI"`
-	APIPort          string `env:"API_PORT"`
-	TokenExp         int    `env:"TOKEN_EXP"`
-	ResendKey        string `env:"RESEND_KEY"`
-	URLFront         string `env:"FRONT_URL"`
-	OTPEmailSize     int8   `env:"OTP_EMAIL_SIZE"`
-	OTPExp           uint8  `env:"OTP_EXP"`
-	PrivateKey       *ecdsa.PrivateKey
-	PublicKey        *ecdsa.PublicKey
+	ConnectionString           string `env:"CONNECTION_STRING"`
+	RedisAdress                string `env:"REDIS_ADRESS"`
+	RedisPassword              string `env:"REDIS_PASSWORD"`
+	RedisDB                    int    `env:"REDIS_DB"`
+	APIPort                    string `env:"API_PORT"`
+	TokenExp                   int    `env:"TOKEN_EXP"`
+	ResendKey                  string `env:"RESEND_KEY"`
+	URLFront                   string `env:"FRONT_URL"`
+	OTPEmailSize               int8   `env:"OTP_EMAIL_SIZE"`
+	OTPExp                     uint8  `env:"OTP_EXP"`
+	CloudFlareAccountAPI       string `env:"CLOUD_FLARE_ACCOUNT_API"`
+	CloudFlareImageDeliveryUrl string `env:"CLOUD_FLARE_IMAGE_DELIVERY_URL"`
+	CloudFlareApiKey           string `env:"CLOUD_FLARE_API_KEY"`
+	PrivateKey                 *ecdsa.PrivateKey
+	PublicKey                  *ecdsa.PublicKey
 }
 
 func LoadEnvironments() {

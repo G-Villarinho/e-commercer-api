@@ -12,6 +12,7 @@ func SetupRoutes(e *echo.Echo, i *do.Injector) {
 	setupHealthCheckRoutes(e, i)
 	setupUserRoutes(e, i)
 	setupStoreRoutes(e, i)
+	setupBillboardRoutes(e, i)
 }
 
 func setupHealthCheckRoutes(e *echo.Echo, i *do.Injector) {
@@ -42,4 +43,10 @@ func setupStoreRoutes(e *echo.Echo, i *do.Injector) {
 	group.GET("", storeHandler.GetAll)
 	group.PATCH("/:storeId/name", storeHandler.UpdateName)
 	group.DELETE("/:storeId", storeHandler.Delete)
+}
+
+func setupBillboardRoutes(e *echo.Echo, i *do.Injector) {
+	billboardHandler := do.MustInvoke[domain.BillboardHandler](i)
+	group := e.Group("/v1/:storeId/billboard", Middleware.CheckLoggedIn(i))
+	group.POST("", billboardHandler.Create)
 }
