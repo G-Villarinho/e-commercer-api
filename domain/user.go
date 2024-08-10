@@ -157,7 +157,11 @@ func (r *ResendCodePayload) Validate() error {
 
 func (u *ConfirmEmailPayload) Validate() error {
 	validate := validator.New()
-	validate.RegisterValidation("numeric", util.IsNumeric)
+	err := validate.RegisterValidation("numeric", util.IsNumeric)
+	if err != nil {
+		return err
+	}
+
 	return validate.Struct(u)
 }
 
