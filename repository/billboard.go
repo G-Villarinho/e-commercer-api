@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/domain"
 	"github.com/go-redis/redis/v8"
 	"github.com/samber/do"
 	"gorm.io/gorm"

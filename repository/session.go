@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/OVillas/e-commercer-api/config"
-	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/domain"
 	"github.com/go-redis/redis/v8"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/samber/do"

@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/OVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

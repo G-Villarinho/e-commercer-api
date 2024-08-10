@@ -11,7 +11,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/OVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/config"
 	"github.com/samber/do"
 )
 

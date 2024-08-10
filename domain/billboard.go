@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OVillas/e-commercer-api/util"
+	"github.com/GSVillas/e-commercer-api/util"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"

@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/OVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/config"
 	"github.com/go-redis/redis/v8"
 )
 

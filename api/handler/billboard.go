@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/domain"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/meysamhadeli/problem-details"

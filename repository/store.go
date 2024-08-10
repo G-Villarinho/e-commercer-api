@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/domain"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/samber/do"

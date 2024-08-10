@@ -1,4 +1,4 @@
-module github.com/OVillas/e-commercer-api
+module github.com/GSVillas/e-commercer-api
 
 go 1.22.5
 

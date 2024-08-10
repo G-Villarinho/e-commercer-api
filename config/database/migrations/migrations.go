@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/OVillas/e-commercer-api/config"
-	"github.com/OVillas/e-commercer-api/config/database"
-	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/config/database"
+	"github.com/GSVillas/e-commercer-api/domain"
 )
 
 func main() {

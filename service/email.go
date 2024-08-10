@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/OVillas/e-commercer-api/domain"
-	"github.com/OVillas/e-commercer-api/secure"
+	"github.com/GSVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/secure"
 	"github.com/resend/resend-go/v2"
 	"github.com/samber/do"
 )

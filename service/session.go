@@ -5,9 +5,9 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/OVillas/e-commercer-api/config"
-	"github.com/OVillas/e-commercer-api/domain"
-	"github.com/OVillas/e-commercer-api/middleware"
+	"github.com/GSVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/middleware"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"

@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"github.com/OVillas/e-commercer-api/domain"
-	Middleware "github.com/OVillas/e-commercer-api/middleware"
+	"github.com/GSVillas/e-commercer-api/domain"
+	Middleware "github.com/GSVillas/e-commercer-api/middleware"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/samber/do"

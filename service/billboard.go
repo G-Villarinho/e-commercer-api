@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/OVillas/e-commercer-api/client"
-	"github.com/OVillas/e-commercer-api/domain"
-	"github.com/OVillas/e-commercer-api/middleware"
+	"github.com/GSVillas/e-commercer-api/client"
+	"github.com/GSVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/middleware"
 	"github.com/google/uuid"
 	"github.com/samber/do"
 )

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/OVillas/e-commercer-api/config"
-	"github.com/OVillas/e-commercer-api/domain"
+	"github.com/GSVillas/e-commercer-api/config"
+	"github.com/GSVillas/e-commercer-api/domain"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/meysamhadeli/problem-details"
